@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<head>
+    <style>
+        body{
+            
+        }
+        .body{
+            width: 340px;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: #fff;
+        }
+        .result_label_frame{
+            width: 200px;
+            margin-right: 20%;
+        }
+        .result_text{
+            resize: vertical;
+            width:330px;
+            height:200px;
+            min-height: 100px;
+            max-height: 400px;
+            border: 2px solid #0a0;  /* 枠線 */
+            border-radius: 0.67em;   /* 角丸 */
+            padding: 0.5em;          /* 内側の余白量 */
+            background-color: snow;  /* 背景色 */
+        }
+        input[type="file"] {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+}
+
+label {
+  padding: 10px 25px;
+  margin: 0 0 10px;
+  background: #aaa;
+  color: #fff;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.fileclear {
+  display: none;
+  margin: 10px 0 0;
+  text-decoration: underline;
+  font-weight: bold;
+  cursor: pointer;
+}
+    </style>
+    <script src="https://riversun.github.io/jsframe/jsframe.js"></script>
+    <script type="text/javascript">
+        <!--
+        // ***** 汎用 *****
+        function Alm(msg) {
+             alert(msg);
+        }
+        function Alm2(msg) {
+            const jsFrame = new JSFrame();
+    jsFrame.showToast({
+        html: msg, align: 'top', duration: 2000
+    });
+        }
+        function BrowserType() {
+            var ua = window.navigator.userAgent;
+            if (ua.indexOf("Opera") >= 0)   { return "Opera"; }   // MSIEより前にチェックが必要
+            if (ua.indexOf("MSIE") >= 0)    { return "MSIE"; }
+            if (ua.indexOf("Trident") >= 0) { return "MSIE"; }    // IE11対策
+            if (ua.indexOf("Chrome") >= 0)  { return "Chrome"; }  // Safariより前にチェックが必要
+            if (ua.indexOf("Safari") >= 0)  { return "Safari"; }
+            if (ua.indexOf("Firefox") >= 0) { return "Firefox"; }
+            return "";
+        }
+        
+        // ***** 動作開始 *****
+        window.onload = function () {
+            // ***** 要素の存在チェック *****
+            if (!document.getElementById("file_sel1"))     { Alm("window.onload:0001"); return false; }
+            if (!document.getElementById("copy_button1"))  { Alm("window.onload:0002"); return false; }
+            if (!document.getElementById("clear_button1")) { Alm("window.onload:0003"); return false; }
+            // ***** イベント登録 *****
+            if (document.addEventListener) {
+                // document.getElementById("drop_area1").addEventListener("drop",     file_drop,     false);
+                // document.getElementById("drop_area1").addEventListener("dragover", file_dragover, false);
+                document.addEventListener("drop",     file_drop,     false);
+                document.addEventListener("dragover", file_dragover, false);
+                document.getElementById("file_sel1").addEventListener("change",    file_select,   false);
+                document.getElementById("file_sel1").addEventListener("click",     file_click,    false);
+                document.getElementById("copy_button1").addEventListener("click",  copy_button,   false);
+                document.getElementById("clear_button1").addEventListener("click", clear_button,  false);
+            } else if (document.attachEvent) {
+                // ***** IE8対策 *****
+                // document.getElementById("drop_area1").attachEvent("ondrop",     file_drop);
+                // document.getElementById("drop_area1").attachEvent("ondragover", file_dragover);
+                document.attachEvent("ondrop",     file_drop);
+                document.attachEvent("ondragover", file_dragover);
+                document.getElementById("file_sel1").attachEvent("onchange",    file_select);
+                document.getElementById("file_sel1").attachEvent("onclick",     file_click);
+                document.getElementById("copy_button1").attachEvent("onclick",  copy_button);
+                document.getElementById("clear_button1").attachEvent("onclick", clear_button);
+            }
+            return true;
+        };
+        
+        // ***** 全選択+コピーボタン *****
+        function copy_button() {
+            // ***** 要素の存在チェック *****
+            if (!document.getElementById("result_text1")) { Alm("copy_button:0001"); return false; }
+            // ***** execCommand の存在チェック *****
+            if (!document.execCommand) {
+                Alm2("ブラウザがコピーに対応していません。");
+                return false;
+            }
+            // ***** テキストボックスの内容チェック *****
+            if (document.getElementById("result_text1").value == "") {
+                Alm2("変換結果がありません。");
+                return false;
+            }
+            // ***** テキストボックスの内容を全選択 *****
+            document.getElementById("result_text1").select();
+            // ***** テキストボックスの内容をクリップボードにコピー *****
+            if (!document.execCommand("copy")) {
+                Alm2("コピーできませんでした。");
+                return false;
+            }
+            // ***** IE8, IE9, IE10, IE11対策 *****
+            if (window.clipboardData && window.clipboardData.getData("Text") == "") {
+                Alm2("コピーできませんでした。(アクセス許可がない等)");
+                return false;
+            }
+            // ***** Firefox対策 *****
+            if (BrowserType() == "Firefox") {
+                setTimeout(function () {
+                    // ***** スクロールを先頭に移動 *****
+                    if (document.getElementById("result_text1").scrollTop) {
+                        document.getElementById("result_text1").scrollTop = 0;
+                    }
+                }, 10);
+            }
+            return true;
+        }
+        
+        // ***** クリアボタン *****
+        function clear_button() {
+            // ***** 要素の存在チェック *****
+            if (!document.getElementById("result_text1")) { Alm("clear_button:0001"); return false; }
+            if (!document.getElementById("file_name1"))   { Alm("clear_button:0002"); return false; }
+            // ***** テキストボックスのクリア *****
+            document.getElementById("result_text1").value = "";
+            // ***** ファイル名のクリア *****
+            document.getElementById("file_name1").innerHTML = "";
+            return true;
+        }
+        
+        // ***** ファイル選択ボタン *****
+        function file_select(ev) {
+            var file;
+        
+            // ***** 要素の存在チェック *****
+            if (!document.getElementById("file_name1")) {
+                Alm("file_select:0001");
+                file_clear();
+                return false;
+            }
+            // ***** FileReader API の存在チェック *****
+            if (typeof (FileReader) == "undefined") {
+                Alm2("ブラウザが FileReader API に対応していません。");
+                file_clear();
+                return false;
+            }
+            // ***** ファイル取得 *****
+            file = ev.target.files[0];
+            // ***** ファイルの読み込みと表示 *****
+            load_and_show_file(file);
+            // ***** ファイル名の表示 *****
+            document.getElementById("file_name1").innerHTML = "" + file.name;
+            file_clear();
+            return true;
+        }
+        // ***** 同一ファイルの選択で読み込まない件の対策(Chrome,Firefox,IE11用) *****
+        function file_click() {
+            // ***** ファイル選択のクリア *****
+            // (IE8, IE9, IE10では効果なし)
+            document.getElementById("file_sel1").value = "";
+            return true;
+        }
+        // ***** 同一ファイルの選択で読み込まない件の対策(IE用) *****
+        function file_clear() {
+            var elm;
+        
+            // ***** IE8, IE9, IE10対策(IE11は除く) *****
+            if (BrowserType() == "MSIE" && window.navigator.userAgent.indexOf("MSIE") >= 0) {
+                // ***** 要素の存在チェック *****
+                if (!document.getElementById("file_sel1")) { Alm("file_clear:0001"); return false; }
+                // ***** ファイル選択のクリア *****
+                elm = document.getElementById("file_sel1");
+                elm.parentNode.innerHTML = elm.parentNode.innerHTML;
+                // ***** イベント再登録 *****
+                if (document.addEventListener) {
+                    document.getElementById("file_sel1").addEventListener("change", file_select, false);
+                } else if (document.attachEvent) {
+                    // ***** IE8対策 *****
+                    document.getElementById("file_sel1").attachEvent("onchange", file_select);
+                }
+            }
+            return true;
+        }
+        
+        // ***** ファイルのドラッグ&ドロップ *****
+        function file_drop(ev) {
+            var file;
+        
+            // ***** イベント抑制 *****
+            // ***** IE8対策 *****
+            if (ev.preventDefault) { ev.preventDefault(); } else { ev.returnValue = false; }
+            // ***** 要素の存在チェック *****
+            if (!document.getElementById("file_name1")) { Alm("file_drop:0001"); return false; }
+            // ***** FileReader API の存在チェック *****
+            if (typeof (FileReader) == "undefined") {
+                Alm2("ブラウザが FileReader API に対応していません。");
+                return false;
+            }
+            // ***** ファイル取得 *****
+            file = ev.dataTransfer.files[0];
+            // ***** ファイルの読み込みと表示 *****
+            load_and_show_file(file);
+            // ***** ファイル名の表示 *****
+            document.getElementById("file_name1").innerHTML = "" + file.name;
+            return false;
+        }
+        function file_dragover(ev) {
+            // ***** イベント抑制 *****
+            // ***** IE8対策 *****
+            if (ev.preventDefault) { ev.preventDefault(); } else { ev.returnValue = false; }
+            // ***** ドロップ操作をコピーとする *****
+            // (マウスアイコンが移動でなくコピー(+)のマークになる)
+            // (IE8, IE9, IE10, IE11では効果なし)
+            ev.dataTransfer.dropEffect = "copy";
+            return false;
+        }
+        
+        // ***** ファイルの読み込みと表示 *****
+        function load_and_show_file(file) {
+            var freader;
+        
+            // ***** 引数のチェック *****
+            if (!file) { Alm("load_and_show_file:0001"); return false; }
+            // ***** 要素の存在チェック *****
+            if (!document.getElementById("result_text1")) { Alm("load_and_show_file:0002"); return false; }
+            // ***** ファイルの読み込みと表示 *****
+            freader = new FileReader();
+            freader.onload = function (ev) {
+                // ***** テキストボックスにセット *****
+                document.getElementById("result_text1").value = ev.target.result;
+                // ***** スクロールを先頭に移動 *****
+                if (document.getElementById("result_text1").scrollTop) {
+                    document.getElementById("result_text1").scrollTop = 0;
+                }
+            };
+            freader.readAsDataURL(file);
+            return true;
+        }
+        
+        // -->
+        </script>
+</head>
+<body>
+    <form action="#" onsubmit="return false;" class="body">
+        <span class="drop_area" id="drop_area1"><span class="drop_label">ファイルをドロップ or </span></span>
+        <!--<div class="file_sel_frame">-->
+            
+        <span><label><input type="file" name="file_sel1" id="file_sel1">ファイルを選択</label></span>
+        
+        <span class="file_name" id="file_name1"></span>
+        <!-- </div> -->
+        <div class="result_label_frame">
+        <span class="result_label"></span><span class="space_label"> </span>
+        <input type="image" id="copy_button1" src="./copy.png" alt="copy" width="20px"><span class="space_label"> </span>
+        <input type="image" id="clear_button1" src="./trash.png" alt="clear" width="25px">
+        </div>
+        <textarea class="result_text" id="result_text1" cols="40" rows="20" placeholder="変換結果"></textarea>
+        </form>
+</body>
